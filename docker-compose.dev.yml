@@ -1,0 +1,13 @@
+# Development overrides (NOT for production)
+#
+# Usage:
+#   export PULSECURE_KEY_PASSWORD=... 
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# This enables loading unsigned models for local/dev workflows.
+
+services:
+  pulsecure:
+    environment:
+      - PULSECURE_ALLOW_UNSIGNED_MODELS=true
+      - PULSECURE_CLEAR_STORAGE_ON_KEY_DECRYPTION_FAILURE=true

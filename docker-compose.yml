@@ -1,0 +1,43 @@
+services:
+  pulsecure:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - pulsecure_model_signing_key_b64
+    container_name: pulsecure
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./app-data:/app/data
+    environment:
+      - RUST_LOG=info
+      - PULSECURE_DB_PATH=/app/data/pulsecure.db
+      - TERM=xterm-256color
+      - PULSECURE_KEY_PASSWORD_FILE=/run/secrets/pulsecure_key_password
+      - PULSECURE_MODEL_SIGNING_PUBKEY_B64_FILE=/run/secrets/pulsecure_model_signing_pubkey_b64
+    secrets:
+      - pulsecure_key_password
+      - pulsecure_model_signing_pubkey_b64
+    network_mode: none
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: "4"
+        reservations:
+          memory: 2G
+          cpus: "1"
+
+secrets:
+  pulsecure_key_password:
+    file: ./secrets/pulsecure_key_password
+  pulsecure_model_signing_key_b64:
+    file: ./secrets/pulsecure_model_signing_key_b64
+  pulsecure_model_signing_pubkey_b64:
+    file: ./secrets/pulsecure_model_signing_pubkey_b64

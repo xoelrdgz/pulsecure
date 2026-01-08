@@ -1,0 +1,89 @@
+# Docker Compose for ML Pipeline
+# Usage:
+#   docker compose -f docker-compose.analysis.yml run --rm train    # Train model
+#   docker compose -f docker-compose.analysis.yml run --rm evaluate # Evaluate model
+#   docker compose -f docker-compose.analysis.yml run --rm shell    # Python shell
+
+services:
+  train:
+    image: python:3.11-slim
+    container_name: pulsecure-train
+    working_dir: /app
+    volumes:
+      - ./python/src:/app/src:ro
+      - ./python/pyproject.toml:/app/pyproject.toml:ro
+      - ./data:/data
+      - ./models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install --quiet pandas scikit-learn imbalanced-learn kagglehub &&
+        python -m src.training.pipeline
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4"
+
+  evaluate:
+    image: python:3.11-slim
+    container_name: pulsecure-evaluate
+    working_dir: /app
+    volumes:
+      - ./python/src:/app/src:ro
+      - ./python/pyproject.toml:/app/pyproject.toml:ro
+      - ./data:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install --quiet pandas scikit-learn imbalanced-learn kagglehub &&
+        python -m src.analysis.evaluate_model
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4"
+
+  features:
+    image: python:3.11-slim
+    container_name: pulsecure-features
+    working_dir: /app
+    volumes:
+      - ./python/src:/app/src:ro
+      - ./python/pyproject.toml:/app/pyproject.toml:ro
+      - ./data:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install --quiet pandas scikit-learn imbalanced-learn kagglehub &&
+        python -m src.analysis.feature_analysis
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4"
+
+  shell:
+    image: python:3.11-slim
+    container_name: pulsecure-shell
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./python/src:/app/src
+      - ./python/pyproject.toml:/app/pyproject.toml
+      - ./data:/data
+      - ./models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install --quiet pandas scikit-learn imbalanced-learn kagglehub &&
+        python
+      "

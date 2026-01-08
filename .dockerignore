@@ -1,0 +1,41 @@
+# Dependencies
+target/
+
+
+# Python
+python/__pycache__/
+python/.venv/
+python/*.egg-info/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Test files
+tests/
+benches/
+
+# Data
+data/
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
