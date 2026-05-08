@@ -1,12 +1,6 @@
-"""
-Pulsecure: Privacy-Preserving CVD Risk Prediction.
-
-FHE-compatible model training and export for tfhe-rs.
-"""
-
 from .data import FEATURE_NAMES, NHANESData, get_preprocessed_data
-from .training import CalibratedQuantizedModel, train_calibrated_model
 from .export import full_pipeline
+from .training import CalibratedQuantizedModel, train_calibrated_model
 
 __all__ = [
     "FEATURE_NAMES",

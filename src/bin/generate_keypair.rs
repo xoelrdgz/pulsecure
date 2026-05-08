@@ -1,21 +1,3 @@
-//! Ed25519 keypair generation utility for model signing.
-//!
-//! Generates a cryptographically secure Ed25519 signing keypair:
-//! - Private seed (32 bytes) written to file with 0600 permissions
-//! - Public key optionally written separately
-//!
-//! # Usage
-//!
-//! ```bash
-//! cargo run --bin generate_keypair -- --out-seed <path> [--out-pub <path>] [--force]
-//! ```
-//!
-//! # Security
-//!
-//! - Uses OS entropy (OsRng) for key generation
-//! - Private seed is zeroized from memory after use
-//! - Output file has restricted permissions (Unix only)
-
 use base64::engine::general_purpose;
 use base64::Engine;
 use ed25519_dalek::SigningKey;
@@ -38,7 +20,6 @@ fn main() {
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            // Back-compat: --out writes the SEED.
             "--out" | "--out-seed" => {
                 let p = args.next().unwrap_or_default();
                 if p.is_empty() {
@@ -135,7 +116,6 @@ fn main() {
         pub_opts.write(true).create(true).truncate(true);
         #[cfg(unix)]
         {
-            // Public key is non-secret; allow read access.
             pub_opts.mode(0o644);
         }
 
@@ -147,13 +127,11 @@ fn main() {
         pub_file.write_all(b"\n").unwrap();
     }
 
-    // Print only non-secret material.
     println!("Wrote signing seed (base64) to {:?}", out_seed_path);
     if let Some(pub_path) = &out_pub_path {
         println!("Wrote public key (base64) to {:?}", pub_path);
     }
     println!("DEV_PUBKEY (hex)={pub_hex}");
 
-    // Best-effort: wipe seed from memory.
     seed.zeroize();
 }

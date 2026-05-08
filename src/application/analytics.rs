@@ -1,14 +1,8 @@
-//! Analytics service: Privacy-preserving aggregate statistics.
-//!
-//! This service provides differential privacy protected statistics
-//! over diagnosis data.
-
 use std::sync::Arc;
 
 use crate::ports::{DifferentialPrivacy, PrivateStatistics, Storage};
 use crate::PulsecureError;
 
-/// Service for privacy-preserving analytics.
 pub struct AnalyticsService<D, S>
 where
     D: DifferentialPrivacy,
@@ -24,7 +18,6 @@ where
     S: Storage,
     S::Error: Into<crate::adapters::StorageError>,
 {
-    /// Create a new analytics service.
     pub fn new(privacy: D, storage: Arc<S>) -> Self {
         Self {
             privacy: Arc::new(std::sync::Mutex::new(privacy)),
@@ -32,20 +25,12 @@ where
         }
     }
 
-    /// Get privacy-preserving aggregate statistics.
-    ///
-    /// # Arguments
-    /// * `epsilon` - Privacy budget for this query
-    ///
-    /// # Errors
-    /// Returns error if privacy budget exhausted or storage fails.
     pub fn get_statistics(&self, epsilon: f64) -> Result<PrivateStatistics, PulsecureError> {
         let privacy = self
             .privacy
             .lock()
             .map_err(|_| PulsecureError::Privacy("DP state lock poisoned".to_string()))?;
 
-        // Check budget
         if !privacy.can_query(epsilon) {
             return Err(PulsecureError::Validation(format!(
                 "Insufficient privacy budget: need {}, have {}",
@@ -54,13 +39,11 @@ where
             )));
         }
 
-        // Load diagnoses
         let diagnoses = self
             .storage
             .load_diagnoses()
             .map_err(|e| PulsecureError::Storage(e.into()))?;
 
-        // Compute private statistics
         let stats = privacy
             .aggregate(&diagnoses, epsilon)
             .map_err(|e| PulsecureError::Privacy(e.to_string()))?;
@@ -75,7 +58,6 @@ where
         Ok(stats)
     }
 
-    /// Get the remaining privacy budget.
     #[must_use]
     pub fn budget_remaining(&self) -> f64 {
         match self.privacy.lock() {
@@ -84,7 +66,6 @@ where
         }
     }
 
-    /// Get the total epsilon spent.
     #[must_use]
     pub fn epsilon_spent(&self) -> f64 {
         match self.privacy.lock() {
@@ -93,7 +74,6 @@ where
         }
     }
 
-    /// Check if a query with the given epsilon can be performed.
     #[must_use]
     pub fn can_query(&self, epsilon: f64) -> bool {
         match self.privacy.lock() {
@@ -132,7 +112,6 @@ mod tests {
 
         service.get_statistics(0.1).expect("Should get stats");
 
-        // Budget should have decreased
         assert!(service.epsilon_spent() > 0.0);
     }
 }

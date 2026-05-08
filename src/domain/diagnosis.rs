@@ -1,22 +1,15 @@
-//! Diagnosis result types.
-//!
-//! Represents the output of the FHE-based heart disease prediction.
-
 use serde::{Deserialize, Serialize};
 
-/// Risk level classification for heart disease.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskLevel {
-    /// Low risk of heart disease
     Low,
-    /// Moderate risk, monitoring recommended
+
     Moderate,
-    /// High risk, intervention recommended
+
     High,
 }
 
 impl RiskLevel {
-    /// Get a human-readable description.
     #[must_use]
     pub fn description(&self) -> &'static str {
         match self {
@@ -26,13 +19,12 @@ impl RiskLevel {
         }
     }
 
-    /// Get the associated color for TUI display (RGB).
     #[must_use]
     pub fn color(&self) -> (u8, u8, u8) {
         match self {
-            Self::Low => (16, 185, 129),    // Emerald (#10B981)
-            Self::Moderate => (251, 191, 36), // Amber (#FBBF24)
-            Self::High => (244, 63, 94),     // Rose (#F43F5E)
+            Self::Low => (16, 185, 129),
+            Self::Moderate => (251, 191, 36),
+            Self::High => (244, 63, 94),
         }
     }
 }
@@ -47,25 +39,36 @@ impl std::fmt::Display for RiskLevel {
     }
 }
 
-/// Result of the ML model prediction (before interpretation).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DiagnosisResult {
-    /// Raw prediction probability (0.0 to 1.0)
     pub probability: f64,
 
-    /// Binary prediction (0 = no disease, 1 = disease present)
     pub prediction: u8,
 
-    /// Confidence score (0.0 to 1.0)
+    #[serde(default)]
+    pub screening_positive: bool,
+
+    #[serde(default = "default_clinical_threshold")]
+    pub threshold_used: f64,
+
     pub confidence: f64,
 }
 
+fn default_clinical_threshold() -> f64 {
+    0.5
+}
+
 impl DiagnosisResult {
-    /// Create a new diagnosis result.
     #[must_use]
     pub fn new(probability: f64) -> Self {
-        let prediction = if probability >= 0.5 { 1 } else { 0 };
-        let confidence = if probability >= 0.5 {
+        Self::with_threshold(probability, default_clinical_threshold())
+    }
+
+    #[must_use]
+    pub fn with_threshold(probability: f64, threshold: f64) -> Self {
+        let screening_positive = probability >= threshold;
+        let prediction = u8::from(screening_positive);
+        let confidence = if screening_positive {
             probability
         } else {
             1.0 - probability
@@ -74,11 +77,12 @@ impl DiagnosisResult {
         Self {
             probability,
             prediction,
+            screening_positive,
+            threshold_used: threshold,
             confidence,
         }
     }
 
-    /// Get the risk level based on probability thresholds.
     #[must_use]
     pub fn risk_level(&self) -> RiskLevel {
         if self.probability < 0.3 {
@@ -91,30 +95,22 @@ impl DiagnosisResult {
     }
 }
 
-/// Complete diagnosis record including metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Diagnosis {
-    /// Unique identifier
     pub id: String,
 
-    /// Reference to patient (if available)
     pub patient_id: Option<String>,
 
-    /// The ML prediction result
     pub result: DiagnosisResult,
 
-    /// Risk classification
     pub risk_level: RiskLevel,
 
-    /// Whether this was computed via FHE (encrypted)
     pub encrypted_computation: bool,
 
-    /// Timestamp of diagnosis
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Diagnosis {
-    /// Create a new diagnosis from a result.
     #[must_use]
     pub fn new(result: DiagnosisResult, encrypted: bool) -> Self {
         Self {
@@ -127,9 +123,12 @@ impl Diagnosis {
         }
     }
 
-    /// Create a diagnosis with patient reference.
     #[must_use]
-    pub fn with_patient(result: DiagnosisResult, patient_id: impl Into<String>, encrypted: bool) -> Self {
+    pub fn with_patient(
+        result: DiagnosisResult,
+        patient_id: impl Into<String>,
+        encrypted: bool,
+    ) -> Self {
         Self {
             id: uuid_v4(),
             patient_id: Some(patient_id.into()),
@@ -141,16 +140,11 @@ impl Diagnosis {
     }
 }
 
-/// Generate a simple UUID v4 (random) using CSPRNG.
-///
-/// Uses ChaCha20Rng seeded from OS entropy to ensure cryptographic randomness
-/// on all platforms. This prevents UUID prediction attacks.
 fn uuid_v4() -> String {
+    use rand::Rng;
     use rand::SeedableRng;
     use rand_chacha::ChaCha20Rng;
-    use rand::Rng;
-    
-    // Use CSPRNG instead of thread_rng() for guaranteed cryptographic security
+
     let mut rng = ChaCha20Rng::from_entropy();
     let bytes: [u8; 16] = rng.gen();
 
@@ -176,6 +170,18 @@ mod tests {
     }
 
     #[test]
+    fn test_screening_threshold_is_not_hardcoded_to_point_five() {
+        let result = DiagnosisResult::with_threshold(0.2, 0.1);
+        assert!(result.screening_positive);
+        assert_eq!(result.prediction, 1);
+        assert!((result.threshold_used - 0.1).abs() < f64::EPSILON);
+
+        let result = DiagnosisResult::with_threshold(0.2, 0.3);
+        assert!(!result.screening_positive);
+        assert_eq!(result.prediction, 0);
+    }
+
+    #[test]
     fn test_diagnosis_creation() {
         let result = DiagnosisResult::new(0.75);
         let diagnosis = Diagnosis::new(result, true);
@@ -190,6 +196,6 @@ mod tests {
         let id1 = uuid_v4();
         let id2 = uuid_v4();
         assert_ne!(id1, id2);
-        assert_eq!(id1.len(), 36); // UUID format with dashes
+        assert_eq!(id1.len(), 36);
     }
 }

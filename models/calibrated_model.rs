@@ -1,78 +1,102 @@
-//! Calibrated quantized model for FHE inference.
-//! Auto-generated - DO NOT EDIT.
-//!
-//! Medical-grade CVD risk prediction.
-//! Includes isotonic calibration for accurate probabilities.
-//!
-//! Validation metrics:
-//!   AUC (calibrated): 0.8476
-//!   AUC (quantized):  0.8468
-//!   Brier score:      0.0651
-//!   Max calib error:  20.26%
-//!   Recall @ thresh:  97.56%
 
-/// Scale factor (2^12)
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub const SCALE_FACTOR: i64 = 4096;
 
-/// Precision bits
+
 pub const PRECISION_BITS: u32 = 12;
 
-/// Feature names
-pub const FEATURE_NAMES: [&str; 9] = [
-    "RIDAGEYR",
-    "BPQ020",
-    "BPXSY1",
-    "SMQ020",
-    "LBDHDD",
-    "LBXSCR",
-    "BMXWAIST",
-    "DIQ010",
-    "LBXGH",
+
+pub const FEATURE_NAMES: [&str; 15] = [
+    "age",
+    "sex",
+    "race",
+    "bmi",
+    "waist",
+    "sbp",
+    "hypertension",
+    "total_chol",
+    "hdl",
+    "hba1c",
+    "serum_glucose",
+    "diabetes",
+    "egfr",
+    "urine_albumin",
+    "ever_smoker",
 ];
 
-/// Quantized coefficients
-pub const COEFFICIENTS_Q: [i64; 9] = [
-    5661,  // RIDAGEYR
-    -2077,  // BPQ020
-    -1246,  // BPXSY1
-    -969,  // SMQ020
-    -1008,  // LBDHDD
-    491,  // LBXSCR
-    494,  // BMXWAIST
-    -431,  // DIQ010
-    234,  // LBXGH
+
+pub const COEFFICIENTS_Q: [i64; 15] = [
+    4918,
+    615,
+    -84,
+    -266,
+    673,
+    -1291,
+    2310,
+    -1045,
+    -192,
+    726,
+    -530,
+    819,
+    -429,
+    0,
+    1098,
 ];
 
-/// Quantized intercept
-pub const INTERCEPT_Q: i64 = -4191;
 
-/// Scaler mean (quantized)
-pub const SCALER_MEAN_Q: [i64; 9] = [
-    190570,  // RIDAGEYR
-    6820,  // BPQ020
-    499472,  // BPXSY1
-    6490,  // SMQ020
-    216551,  // LBDHDD
-    3690,  // LBXSCR
-    400891,  // BMXWAIST
-    7866,  // DIQ010
-    23223,  // LBXGH
+pub const INTERCEPT_Q: i64 = -4282;
+
+
+pub const SCALER_MEAN_Q: [i64; 15] = [
+    200884,
+    1940,
+    12911,
+    119055,
+    406097,
+    504311,
+    1541,
+    768545,
+    215819,
+    23431,
+    427476,
+    507,
+    385185,
+    173172,
+    1774,
 ];
 
-/// Scaler std inverse (quantized)
-pub const SCALER_STD_INV_Q: [i64; 9] = [
-    226,  // RIDAGEYR
-    7749,  // BPQ020
-    234,  // BPXSY1
-    8006,  // SMQ020
-    259,  // LBDHDD
-    8985,  // LBXSCR
-    250,  // BMXWAIST
-    10235,  // DIQ010
-    4076,  // LBXGH
+
+pub const SCALER_STD_INV_Q: [i64; 15] = [
+    232,
+    8203,
+    3511,
+    588,
+    256,
+    236,
+    8455,
+    104,
+    264,
+    3944,
+    100,
+    12442,
+    187,
+    15,
+    8266,
 ];
 
-// === Sigmoid LUT ===
+
 pub const SIGMOID_LUT_INPUT_BITS: u32 = 8;
 pub const SIGMOID_LUT_OUTPUT_BITS: u32 = 12;
 pub const SIGMOID_INPUT_RANGE: f64 = 8.0;
@@ -96,10 +120,10 @@ pub const SIGMOID_LUT: [u16; 256] = [
     4092, 4093, 4093, 4093, 4093, 4093, 4094, 4094, 4094, 4094, 4094, 4094, 4094, 4094, 4095, 4095,
 ];
 
-// === Isotonic Calibration LUT ===
+
 pub const CALIBRATION_LUT_SIZE: usize = 64;
 
-/// Input breakpoints (quantized, divide by 4096)
+
 pub const CALIBRATION_X_Q: [u16; 64] = [
     0, 65, 130, 195, 260, 325, 390, 455,
     520, 585, 650, 715, 780, 845, 910, 975,
@@ -111,20 +135,20 @@ pub const CALIBRATION_X_Q: [u16; 64] = [
     3641, 3706, 3771, 3836, 3901, 3966, 4031, 4096,
 ];
 
-/// Output values (quantized, divide by 4096)
+
 pub const CALIBRATION_Y_Q: [u16; 64] = [
-    0, 0, 0, 0, 0, 0, 0, 0,
-    69, 69, 137, 137, 137, 137, 137, 137,
-    137, 137, 137, 137, 137, 137, 137, 137,
-    137, 137, 137, 137, 137, 137, 137, 292,
-    354, 354, 354, 354, 354, 354, 354, 354,
-    354, 529, 529, 896, 896, 896, 896, 1005,
-    1005, 1005, 1005, 1005, 1005, 1186, 1186, 1186,
-    1365, 2294, 2294, 2389, 2389, 2976, 3940, 4096,
+    0, 9, 17, 25, 33, 42, 50, 59,
+    68, 77, 87, 96, 106, 116, 127, 138,
+    149, 161, 173, 185, 198, 212, 225, 240,
+    255, 270, 287, 304, 321, 340, 359, 379,
+    401, 423, 446, 471, 497, 525, 554, 585,
+    618, 654, 691, 732, 775, 822, 872, 927,
+    987, 1052, 1123, 1202, 1290, 1388, 1498, 1623,
+    1765, 1931, 2125, 2356, 2637, 2989, 3445, 4096,
 ];
 
-// === Clinical Threshold ===
-/// Optimal threshold for 98% recall
-/// Use this instead of 0.5!
-pub const CLINICAL_THRESHOLD: f64 = 0.03333333333333333;
-pub const CLINICAL_THRESHOLD_Q: u16 = 137;
+
+
+
+pub const CLINICAL_THRESHOLD: f64 = 0.03187349759615385;
+pub const CLINICAL_THRESHOLD_Q: u16 = 131;

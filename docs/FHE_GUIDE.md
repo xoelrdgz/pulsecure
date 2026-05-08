@@ -62,12 +62,12 @@ After multiplies:  ################  (high, decryption fails)
 
 ```rust
 ClientKey {
-    secret_key: [u8],  // Decryption capability, NEVER share
+    secret_key: [u8],
 }
 
 ServerKey {
-    bootstrapping_key: [...],  // Noise refresh
-    key_switching_key: [...],  // Operation support
+    bootstrapping_key: [...],
+    key_switching_key: [...],
 }
 ```
 
@@ -84,12 +84,12 @@ ServerKey {
 The Python pipeline exports a quantized model:
 
 ```
-1. Input: Patient features (10 values)
+1. Input: Patient features (9 values)
 2. Normalize: Subtract mean, multiply by 1/std (quantized)
 3. Linear: Dot product with coefficients (integer arithmetic)
 4. Sigmoid: Lookup table (256 entries)
-5. Calibration: Isotonic LUT (64 entries)
-6. Threshold: Compare to clinical threshold
+5. Calibration: Isotonic LUT (64 entries) after local decryption
+6. Threshold: Compare calibrated probability to the model-provided screening threshold
 ```
 
 ### Quantization Details

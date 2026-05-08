@@ -97,9 +97,9 @@ DP noise prevents this attack:
 
 ```rust
 pub struct PrivacyConfig {
-    pub max_epsilon: f64,        // Maximum budget per session
-    pub epsilon_per_query: f64,  // Budget per query
-    pub use_laplace: bool,       // Laplace vs Gaussian
+    pub max_epsilon: f64,
+    pub epsilon_per_query: f64,
+    pub use_laplace: bool,
 }
 ```
 

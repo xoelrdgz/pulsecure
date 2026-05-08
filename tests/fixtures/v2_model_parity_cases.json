@@ -1,0 +1,78 @@
+{
+  "model_sha256": "5604d56f58419a4c531446a2569f5c740ba5fc8663e9ab2fc1ab86ddd7710492",
+  "threshold": 0.03187349759615385,
+  "cases": [
+    {
+      "name": "sample_male_moderate",
+      "features": {
+        "age": 55,
+        "sex": 1,
+        "race": 3,
+        "bmi": 30.5,
+        "waist": 102,
+        "sbp": 142,
+        "hypertension": 1,
+        "total_chol": 205,
+        "hdl": 45,
+        "hba1c": 5.9,
+        "serum_glucose": 108,
+        "diabetes": 0,
+        "egfr": 78,
+        "urine_albumin": 24,
+        "ever_smoker": 1
+      },
+      "linear": 0.1575891375541687,
+      "uncalibrated_probability": 0.5390625,
+      "probability": 0.10862755408653846,
+      "screening_positive": true
+    },
+    {
+      "name": "young_low_signal",
+      "features": {
+        "age": 32,
+        "sex": 0,
+        "race": 3,
+        "bmi": 22,
+        "waist": 76,
+        "sbp": 112,
+        "hypertension": 0,
+        "total_chol": 165,
+        "hdl": 62,
+        "hba1c": 5.1,
+        "serum_glucose": 86,
+        "diabetes": 0,
+        "egfr": 105,
+        "urine_albumin": 6,
+        "ever_smoker": 0
+      },
+      "linear": -3.0432618856430054,
+      "uncalibrated_probability": 0.04296875,
+      "probability": 0.005532602163461539,
+      "screening_positive": false
+    },
+    {
+      "name": "older_high_signal",
+      "features": {
+        "age": 74,
+        "sex": 1,
+        "race": 4,
+        "bmi": 34,
+        "waist": 118,
+        "sbp": 158,
+        "hypertension": 1,
+        "total_chol": 238,
+        "hdl": 38,
+        "hba1c": 7.2,
+        "serum_glucose": 154,
+        "diabetes": 1,
+        "egfr": 52,
+        "urine_albumin": 110,
+        "ever_smoker": 1
+      },
+      "linear": 1.8888864517211914,
+      "uncalibrated_probability": 0.8642578125,
+      "probability": 0.3793381911057692,
+      "screening_positive": true
+    }
+  ]
+}

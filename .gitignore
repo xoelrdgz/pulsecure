@@ -1,36 +1,23 @@
-# Build artifacts
 /target/
-/.cargo/
-
-# Data directory
-/data/
-
-# Runtime data
-/app-data/
-
-# Secrets
-/secrets/
-
-# Python artifacts
-/python/__pycache__/
-/python/.venv/
-/python/*.egg-info/
-*.pyc
-*.pyo
-
-# IDE
+data/
+app-data/
+secrets/
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+web/node_modules/
+web/dist/
 .vscode/
+.idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Logs
 *.log
-
-# Environment files
 .env
-.env.local
-
+.env.*

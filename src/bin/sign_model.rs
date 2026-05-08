@@ -1,21 +1,3 @@
-//! Model signing utility for Pulsecure ML models.
-//!
-//! Creates a signed manifest (`manifest.json`) and Ed25519 signature (`model.sig`)
-//! for model files, enabling cryptographic verification at runtime.
-//!
-//! # Usage
-//!
-//! ```bash
-//! cargo run --bin sign_model -- <model_dir> [--serial <n>] [--nonce-b64 <b64>]
-//! ```
-//!
-//! # Security
-//!
-//! - Signing key sourced from secure locations (FD, file, Docker secret)
-//! - Manifest includes SHA-256 hashes of all bound files
-//! - Anti-rollback fields: serial number, creation timestamp, random nonce
-//! - Private key material zeroized after use
-
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -36,15 +18,11 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 #[derive(Debug, Serialize)]
 struct SignedModelManifest {
     version: u32,
-    /// Monotonic serial number for anti-rollback.
-    ///
-    /// Recommended: a CI build number or other strictly increasing value.
-    /// If not provided, defaults to `created_at`.
+
     serial: u64,
-    /// Unix timestamp (seconds) when this manifest was created.
-    /// Used for anti-rollback checks during verification.
+
     created_at: i64,
-    /// Random nonce (base64, 16 bytes) for uniqueness.
+
     nonce_b64: String,
     files: BTreeMap<String, String>,
 }
@@ -75,7 +53,7 @@ fn read_signing_seed_b64() -> Result<Zeroizing<String>, String> {
         if fd <= 2 {
             return Err("Refusing to read signing key from stdio FD".to_string());
         }
-        // SAFETY: take ownership of FD for one-time secret read.
+
         let mut file = unsafe { std::fs::File::from_raw_fd(fd) };
         let mut buf = String::new();
         use std::io::Read;
@@ -108,7 +86,6 @@ fn read_signing_seed_b64() -> Result<Zeroizing<String>, String> {
         return Ok(Zeroizing::new(secret));
     }
 
-    // Dev-only fallback for convenience.
     if cfg!(debug_assertions) {
         if let Ok(v) = env::var("PULSECURE_MODEL_SIGNING_KEY_B64")
             .or_else(|_| env::var("Pulsecure_MODEL_SIGNING_KEY_B64"))
@@ -274,7 +251,6 @@ fn main() -> Result<(), String> {
     println!("Wrote signature: {sig_path:?}");
     println!("DEV_PUBKEY (hex)={}", to_hex(verifying_key.as_bytes()));
 
-    // Best-effort: wipe seed from memory.
     seed.zeroize();
 
     Ok(())

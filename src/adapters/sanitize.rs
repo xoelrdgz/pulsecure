@@ -1,44 +1,11 @@
-//! Log sanitization utilities for PII/secret filtering.
-//!
-//! This module provides string-based sanitization helpers that can be applied
-//! to log output (or any other untrusted text), including:
-//! - Patient IDs
-//! - Medical record numbers (MRNs)
-//! - Names and similar patterns
-//! - Raw feature values
-//! - Common secret formats (JWTs, PEM blocks, hex/base64 tokens)
-//!
-//! # Important: prefer structured logging + redaction-by-type
-//!
-//! Sanitizing strings is a defense-in-depth fallback. The primary protection is
-//! to ensure sensitive data never reaches logging calls in the first place.
-//! In higher-integrity systems, prefer structured logging where sensitive fields
-//! are wrapped in types whose `Debug`/`Display` implementations redact by default.
-//!
-//! # Performance / DoS
-//!
-//! Even with linear-time regex engines, scanning and allocating on large inputs can
-//! be expensive. `sanitize()` enforces a maximum input size (see
-//! `PULSECURE_SANITIZE_MAX_BYTES`) to reduce the impact of maliciously large logs.
-//!
-//! # Security
-//!
-//! This is a defense-in-depth measure.
-
 use regex::{Regex, RegexSet};
 use std::sync::OnceLock;
 use tracing_subscriber::fmt::MakeWriter;
 
-/// Compiled patterns for PII detection and sanitization.
 static PII_PATTERNS: OnceLock<PiiPatterns> = OnceLock::new();
 
-/// Maximum number of bytes to sanitize per call.
-///
-/// This is a DoS guardrail: sanitizing huge untrusted strings is expensive.
-/// Defaults to 16 KiB; can be overridden via `PULSECURE_SANITIZE_MAX_BYTES`.
 const DEFAULT_SANITIZE_MAX_BYTES: usize = 16 * 1024;
 
-/// A compiled PII pattern with its replacement text.
 struct PiiPattern {
     regex: Regex,
     replacement: &'static str,
@@ -55,7 +22,6 @@ fn truncate_to_char_boundary(input: &str, max_bytes: usize) -> (&str, bool) {
         return (input, false);
     }
 
-    // Ensure we don't panic on UTF-8 boundaries.
     let mut end = max_bytes.min(input.len());
     while end > 0 && !input.is_char_boundary(end) {
         end -= 1;
@@ -71,38 +37,36 @@ fn max_sanitize_bytes() -> usize {
         .unwrap_or(DEFAULT_SANITIZE_MAX_BYTES)
 }
 
-/// Initialize PII patterns (called once at startup).
 fn get_patterns() -> &'static PiiPatterns {
     PII_PATTERNS.get_or_init(|| {
-        // NOTE: Rust's `regex` crate is linear-time (no catastrophic backtracking),
-        // but sanitizing large strings can still be CPU-expensive. We keep patterns
-        // simple and cap input size (see `max_sanitize_bytes`).
+
+
         let fast_rules: Vec<(&'static str, &'static str)> = vec![
-            // UUID patterns (patient IDs, diagnosis IDs)
+
             (
                 r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
                 "[REDACTED-UUID]",
             ),
-            // SSN-like patterns (xxx-xx-xxxx)
+
             (r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED-SSN]"),
-            // MRN patterns (common formats)
+
             (r"\bMRN[:\s]?\d{6,10}\b", "[REDACTED-MRN]"),
-            // Email patterns (bounded labels; case-insensitive)
+
             (
                 r"(?i)\b[a-z0-9](?:[a-z0-9._%+-]{0,62}[a-z0-9])?@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b",
                 "[REDACTED-EMAIL]",
             ),
-            // Phone patterns
+
             (
                 r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b",
                 "[REDACTED-PHONE]",
             ),
-            // JWTs (common bearer tokens)
+
             (
                 r"\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b",
                 "[REDACTED-JWT]",
             ),
-            // Contextual secrets (reduce false positives vs. raw base64/hex)
+
             (
                 r"(?i)\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|passwd|pwd|private[_-]?key|seed|signature|sig|token|key)\b\s*[:=]\s*[A-Za-z0-9+/]{32,}={0,2}\b",
                 "[REDACTED-SECRET]",
@@ -111,12 +75,12 @@ fn get_patterns() -> &'static PiiPatterns {
                 r"(?i)\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|passwd|pwd|private[_-]?key|seed|signature|sig|token|key)\b\s*[:=]\s*[0-9a-fA-F]{16,}\b",
                 "[REDACTED-SECRET]",
             ),
-            // Broad key material pattern (defense-in-depth)
+
             (r"\b[0-9a-fA-F]{32,}\b", "[REDACTED-KEY]"),
         ];
 
-        // PEM patterns are intentionally excluded from the RegexSet because large bounded
-        // dot-matches-newline patterns can blow up the compiled program size when merged.
+
+
         let pem_patterns: Vec<PiiPattern> = vec![
             PiiPattern {
                 regex: Regex::new(
@@ -152,10 +116,6 @@ fn get_patterns() -> &'static PiiPatterns {
     })
 }
 
-/// Sanitize a string by replacing PII patterns.
-///
-/// This function applies all registered PII patterns to the input string
-/// and returns a sanitized version.
 #[must_use]
 pub fn sanitize(input: &str) -> String {
     sanitize_with_limit(input, max_sanitize_bytes())
@@ -166,9 +126,12 @@ fn sanitize_with_limit(input: &str, max_bytes: usize) -> String {
 
     let (prefix, truncated) = truncate_to_char_boundary(input, max_bytes);
 
-    // Fast path: single scan for "any match".
     if !patterns.fast_set.is_match(prefix)
-        && !(prefix.contains("-----BEGIN ") && patterns.pem_patterns.iter().any(|p| p.regex.is_match(prefix)))
+        && !(prefix.contains("-----BEGIN ")
+            && patterns
+                .pem_patterns
+                .iter()
+                .any(|p| p.regex.is_match(prefix)))
     {
         let mut out = prefix.to_string();
         if truncated {
@@ -177,7 +140,6 @@ fn sanitize_with_limit(input: &str, max_bytes: usize) -> String {
         return out;
     }
 
-    // Only apply patterns that matched the original prefix.
     let matched: Vec<usize> = patterns.fast_set.matches(prefix).into_iter().collect();
     let mut result = prefix.to_string();
     for idx in matched {
@@ -188,7 +150,6 @@ fn sanitize_with_limit(input: &str, max_bytes: usize) -> String {
             .to_string();
     }
 
-    // PEM blocks are rare but dangerous if logged; only attempt if a cheap trigger matches.
     if result.contains("-----BEGIN ") {
         for pattern in &patterns.pem_patterns {
             if pattern.regex.is_match(&result) {
@@ -206,7 +167,6 @@ fn sanitize_with_limit(input: &str, max_bytes: usize) -> String {
     result
 }
 
-/// Check if a string contains potential PII.
 #[must_use]
 pub fn contains_pii(input: &str) -> bool {
     let patterns = get_patterns();
@@ -215,17 +175,14 @@ pub fn contains_pii(input: &str) -> bool {
         return true;
     }
     if prefix.contains("-----BEGIN ") {
-        return patterns.pem_patterns.iter().any(|p| p.regex.is_match(prefix));
+        return patterns
+            .pem_patterns
+            .iter()
+            .any(|p| p.regex.is_match(prefix));
     }
     false
 }
 
-/// A `tracing_subscriber` writer wrapper that sanitizes formatted log output
-/// before it is written to the underlying sink.
-///
-/// This keeps sanitization centralized (no need to call `sanitize()` at every
-/// callsite). It is still defense-in-depth: prefer structured logging and
-/// redaction-by-type to avoid sensitive data entering formatted strings.
 #[derive(Debug)]
 pub struct SanitizingMakeWriter<M> {
     inner: M,
@@ -285,8 +242,6 @@ where
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.buffer.extend_from_slice(buf);
 
-        // Prevent unbounded buffering if the formatter writes a huge line with no newlines.
-        // We fall back to lossy UTF-8 conversion; `sanitize()` will also cap the output.
         let hard_cap = max_sanitize_bytes().saturating_mul(2);
         if hard_cap > 0 && self.buffer.len() > hard_cap {
             let s = String::from_utf8_lossy(&self.buffer).to_string();
@@ -371,9 +326,7 @@ mod tests {
     fn test_sanitize_key_material() {
         let input = "Key: 0123456789abcdef0123456789abcdef";
         let sanitized = sanitize(input);
-        assert!(
-            sanitized.contains("[REDACTED-KEY]") || sanitized.contains("[REDACTED-SECRET]")
-        );
+        assert!(sanitized.contains("[REDACTED-KEY]") || sanitized.contains("[REDACTED-SECRET]"));
     }
 
     #[test]
@@ -396,8 +349,7 @@ mod tests {
         let input = "prefix 0123456789abcdef0123456789abcdef suffix";
         let sanitized = sanitize_with_limit(input, 16);
         assert!(sanitized.contains("[TRUNCATED]"));
-        // Make sure we still sanitize within the prefix.
-        // With the small cap, we might cut in the middle, but we should never panic.
+
         let _ = sanitized;
     }
 }

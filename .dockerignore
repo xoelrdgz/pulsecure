@@ -1,41 +1,22 @@
-# Dependencies
-target/
-
-
-# Python
-python/__pycache__/
-python/.venv/
-python/*.egg-info/
+.git
+.github
+.venv
+venv
+target
+data
+app-data
+secrets
+web/node_modules
+web/dist
+__pycache__
 *.pyc
-*.pyo
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Git
-.git/
-.gitignore
-
-# Documentation
-docs/
-*.md
-!README.md
-
-# CI/CD
-.github/
-.gitlab-ci.yml
-
-# Test files
-tests/
-benches/
-
-# Data
-data/
-
-# Temporary files
+.pytest_cache
+.ruff_cache
+.vscode
+.idea
+*.db
+*.db-shm
+*.db-wal
 *.log
-*.tmp
-.DS_Store
+.env
+.env.*
